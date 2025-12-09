@@ -23,4 +23,14 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// sessionTokens is used for simple stateless auth tokens (hashed)
+userSchema.add({
+  sessionTokens: [
+    {
+      tokenHash: { type: String },
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
+});
+
 export const User = mongoose.model("User", userSchema);
