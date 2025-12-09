@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, SlidersHorizontal, Sparkles, TrendingUp, Star } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal, Sparkles} from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -411,47 +411,20 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
         </div>
       )}
 
-      {/* EXPLORE MODE - Recommendations */}
-      {mode === 'explore' && recommendations && (
-        <div className="space-y-8">
-          {/* Recommended for You */}
-          {recommendations.forYou.length > 0 && (
-            <div>
-              <div className="flex items-center mb-4">
-                <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
-                <h3 className="text-2xl text-gray-900">Recommended for You</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {recommendations.forYou.map(renderBookCard)}
-              </div>
-            </div>
-          )}
-
-          {/* Trending Now */}
-          <div>
-            <div className="flex items-center mb-4">
-              <TrendingUp className="w-6 h-6 text-orange-600 mr-2" />
-              <h3 className="text-2xl text-gray-900">Trending Now</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {recommendations.trending.map(renderBookCard)}
-            </div>
-          </div>
-
-          {/* Popular Picks */}
-          <div>
-            <div className="flex items-center mb-4">
-              <Star className="w-6 h-6 text-yellow-600 mr-2" />
-              <h3 className="text-2xl text-gray-900">Popular Picks</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {recommendations.popular.map(renderBookCard)}
-            </div>
-          </div>
+     {/* Recommendations */}
+    {mode === 'explore' && recommendations && recommendations.forYou.length > 0 && (
+      <div>
+        <div className="flex items-center mb-4">
+          <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+          <h3 className="text-2xl text-gray-900">Recommended for You</h3>
         </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {recommendations.forYou.map(renderBookCard)}
+      </div>
+    </div>
+    )}
 
-      {/* SEARCH MODE - Results */}
+      {/* Search */}
       {mode === 'searching' && (
         <>
           <div className="mb-4">
