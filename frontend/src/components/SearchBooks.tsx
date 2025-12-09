@@ -27,9 +27,26 @@ import { BookDetailModal } from './BookDetailModal';
 interface SearchBooksProps {
   onAddBook: (book: LoggedBook) => void;
   loggedBooks: LoggedBook[];
+  currentUserId: string;
+  currentUserName: string;
+  reviews: Review[];  // This line must be included
+  onAddReview: (review: Review) => void;
+  onUpdateReview: (reviewId: string, updates: { rating: number; text: string }) => void;
+  onDeleteReview: (reviewId: string) => void;
 }
 
-export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
+interface Review {
+  id: string;
+  bookId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUserName, reviews, onAddReview, onDeleteReview, onUpdateReview}: SearchBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [filterAuthor, setFilterAuthor] = useState('all');
@@ -201,7 +218,7 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
             handleLogBook(book);
           }}
           disabled={isBookLogged(book.id)}
-          className="w-full cursor-pointer"
+          className="w-full"
           variant={isBookLogged(book.id) ? "secondary" : "default"}
         >
           {isBookLogged(book.id) ? 'Already Logged' : 'Log This Book'}
@@ -394,7 +411,7 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
         </div>
       )}
 
-      {/*Recommendations */}
+      {/* EXPLORE MODE - Recommendations */}
       {mode === 'explore' && recommendations && (
         <div className="space-y-8">
           {/* Recommended for You */}
@@ -409,11 +426,32 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
               </div>
             </div>
           )}
-         
+
+          {/* Trending Now */}
+          <div>
+            <div className="flex items-center mb-4">
+              <TrendingUp className="w-6 h-6 text-orange-600 mr-2" />
+              <h3 className="text-2xl text-gray-900">Trending Now</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {recommendations.trending.map(renderBookCard)}
+            </div>
+          </div>
+
+          {/* Popular Picks */}
+          <div>
+            <div className="flex items-center mb-4">
+              <Star className="w-6 h-6 text-yellow-600 mr-2" />
+              <h3 className="text-2xl text-gray-900">Popular Picks</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {recommendations.popular.map(renderBookCard)}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Search */}
+      {/* SEARCH MODE - Results */}
       {mode === 'searching' && (
         <>
           <div className="mb-4">
@@ -452,22 +490,29 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
       )}
 
       {/* Book Detail Modal */}
-      {selectedBookForDetail && (
-        <BookDetailModal
-          book={selectedBookForDetail}
-          open={detailModalOpen}
-          onOpenChange={setDetailModalOpen}
-          onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
-            const newLoggedBook: LoggedBook = {
-              ...book,
-              ...logData,
-              loggedDate: new Date().toISOString().split('T')[0]
-            };
-            onAddBook(newLoggedBook);
-            setDetailModalOpen(false);
-          } : undefined}
-        />
-      )}
+      {/* Book Detail Modal */}
+{selectedBookForDetail && (
+  <BookDetailModal
+    book={selectedBookForDetail}
+    currentUserId={currentUserId}
+    currentUserName={currentUserName}
+    reviews={reviews.filter(r => r.bookId === selectedBookForDetail.id)}
+    open={detailModalOpen}
+    onOpenChange={setDetailModalOpen}
+    onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
+      const newLoggedBook: LoggedBook = {
+        ...book,
+        ...logData,
+        loggedDate: new Date().toISOString().split('T')[0]
+      };
+      onAddBook(newLoggedBook);
+      setDetailModalOpen(false);
+    } : undefined}
+    onAddReview={onAddReview}
+    onUpdateReview={onUpdateReview}
+    onDeleteReview={onDeleteReview}
+  />
+)}
     </div>
   );
 }

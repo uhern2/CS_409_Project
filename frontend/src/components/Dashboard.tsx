@@ -1,11 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BookOpen, Search, Library, LogOut, Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { MyBooks } from './MyBooks';
 import { SearchBooks } from './SearchBooks';
 import { mockLoggedBooks } from '../data/mockBooks';
 import { LoggedBook } from '../types/book';
+import { useNavigate } from 'react-router-dom';
+
+interface Review {
+  id: string;
+  bookId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 interface DashboardProps {
   user: { name: string; email: string };
@@ -19,6 +30,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
   const [currentView, setCurrentView] = useState<View>('mybooks');
   const [loggedBooks, setLoggedBooks] = useState<LoggedBook[]>(mockLoggedBooks);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   const handleAddBook = (newBook: LoggedBook) => {
     setLoggedBooks([newBook, ...loggedBooks]);
@@ -42,6 +54,24 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           : book
       )
     );
+  };
+
+  const handleAddReview = (review: Review) => {
+    setReviews(prevReviews => [review, ...prevReviews]);
+  };
+
+  const handleUpdateReview = (reviewId: string, updates: { rating: number; text: string }) => {
+    setReviews(prevReviews =>
+      prevReviews.map(r =>
+        r.id === reviewId
+          ? { ...r, ...updates, updatedAt: new Date().toISOString().split('T')[0] }
+          : r
+      )
+    );
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+    setReviews(prevReviews => prevReviews.filter(r => r.id !== reviewId));
   };
 
   return (
@@ -154,12 +184,27 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         {currentView === 'mybooks' && (
           <MyBooks 
             loggedBooks={loggedBooks} 
+            currentUserId="current-user-id"
+            currentUserName={user.name}
+            reviews={reviews}
             onDeleteBook={handleDeleteBook}
             onUpdateBook={handleUpdateBook}
+            onAddReview={handleAddReview}
+            onUpdateReview={handleUpdateReview}
+            onDeleteReview={handleDeleteReview}
           />
         )}
         {currentView === 'search' && (
-          <SearchBooks onAddBook={handleAddBook} loggedBooks={loggedBooks} />
+          <SearchBooks 
+            onAddBook={handleAddBook} 
+            loggedBooks={loggedBooks}
+            currentUserId="current-user-id"
+            currentUserName={user.name}
+            reviews={reviews}
+            onAddReview={handleAddReview}
+            onUpdateReview={handleUpdateReview}
+            onDeleteReview={handleDeleteReview}
+          />
         )}
       </main>
     </div>
