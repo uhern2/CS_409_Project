@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Search, Calendar, Star, Trash2, Filter } from 'lucide-react';
+import { Search, Calendar, Star, Trash2, Filter, Edit } from 'lucide-react';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LoggedBook } from '../types/book';
+import { LogBookDialog } from './LogBookDialog';
 import {
   Select,
   SelectContent,
@@ -26,14 +27,22 @@ import {
 interface MyBooksProps {
   loggedBooks: LoggedBook[];
   onDeleteBook: (bookId: string) => void;
+  onUpdateBook: (bookId: string, updates: {
+    startDate: string;
+    finishDate: string;
+    review: string;
+    rating: number;
+  }) => void;
 }
 
-export function MyBooks({ loggedBooks, onDeleteBook }: MyBooksProps) {
+export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [bookToEdit, setBookToEdit] = useState<LoggedBook | null>(null);
 
   // Get unique genres from logged books
   const genres = Array.from(new Set(loggedBooks.map(book => book.genre)));
@@ -72,6 +81,23 @@ export function MyBooks({ loggedBooks, onDeleteBook }: MyBooksProps) {
     }
     setDeleteDialogOpen(false);
     setBookToDelete(null);
+  };
+
+  const handleEditClick = (book: LoggedBook) => {
+    setBookToEdit(book);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateLog = (updates: {
+    startDate: string;
+    finishDate: string;
+    review: string;
+    rating: number;
+  }) => {
+    if (!bookToEdit) return;
+    onUpdateBook(bookToEdit.id, updates);
+    setEditDialogOpen(false);
+    setBookToEdit(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -156,14 +182,24 @@ export function MyBooks({ loggedBooks, onDeleteBook }: MyBooksProps) {
                       <h3 className="text-gray-900 mb-1 line-clamp-2">{book.title}</h3>
                       <p className="text-sm text-gray-600 mb-2">{book.author}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteClick(book.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditClick(book)}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 transition-transform"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(book.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   <Badge variant="secondary" className="mb-3">{book.genre}</Badge>
@@ -203,6 +239,22 @@ export function MyBooks({ loggedBooks, onDeleteBook }: MyBooksProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Log Dialog */}
+      {bookToEdit && (
+        <LogBookDialog
+          book={bookToEdit}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          initialLog={{
+            startDate: bookToEdit.startDate,
+            finishDate: bookToEdit.finishDate,
+            review: bookToEdit.review,
+            rating: bookToEdit.rating,
+          }}
+          onSave={handleUpdateLog}
+        />
+      )}
     </div>
   );
 }

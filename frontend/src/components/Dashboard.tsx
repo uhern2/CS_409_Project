@@ -27,6 +27,21 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     setLoggedBooks(loggedBooks.filter(book => book.id !== bookId));
   };
 
+  const handleUpdateBook = (bookId: string, updates: {
+    startDate: string;
+    finishDate: string;
+    review: string;
+    rating: number;
+  }) => {
+    setLoggedBooks(prevBooks => 
+      prevBooks.map(book => 
+        book.id === bookId 
+          ? { ...book, ...updates }
+          : book
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -132,7 +147,11 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'mybooks' && (
-          <MyBooks loggedBooks={loggedBooks} onDeleteBook={handleDeleteBook} />
+          <MyBooks 
+            loggedBooks={loggedBooks} 
+            onDeleteBook={handleDeleteBook}
+            onUpdateBook={handleUpdateBook}
+          />
         )}
         {currentView === 'search' && (
           <SearchBooks onAddBook={handleAddBook} loggedBooks={loggedBooks} />
