@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BookOpen, Search, Library, LogOut, Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { MyBooks } from './MyBooks';
@@ -14,6 +15,7 @@ interface DashboardProps {
 type View = 'mybooks' | 'search';
 
 export function Dashboard({ user, onLogout }: DashboardProps) {
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<View>('mybooks');
   const [loggedBooks, setLoggedBooks] = useState<LoggedBook[]>(mockLoggedBooks);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,10 +82,13 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
             </nav>
 
             <div className="flex items-center space-x-4">
-              <div className="hidden sm:block text-right">
+              <button
+                onClick={() => navigate('/profile')}
+                className="hidden sm:block text-right hover:opacity-80 transition-opacity cursor-pointer"
+              >
                 <p className="text-gray-900">{user.name}</p>
                 <p className="text-sm text-gray-500">{user.email}</p>
-              </div>
+              </button>
               <Button variant="ghost" onClick={onLogout} className="hidden md:flex items-center">
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout

@@ -22,6 +22,7 @@ import {
   SheetTrigger,
 } from './ui/sheet';
 import { LogBookDialog } from './LogBookDialog';
+import { BookDetailModal } from './BookDetailModal';
 
 interface SearchBooksProps {
   onAddBook: (book: LoggedBook) => void;
@@ -38,6 +39,8 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [logDialogOpen, setLogDialogOpen] = useState(false);
   const [mode, setMode] = useState<'explore' | 'searching'>('explore');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedBookForDetail, setSelectedBookForDetail] = useState<Book | LoggedBook | null>(null);
 
   // Get unique genres and authors
   const genres = Array.from(new Set(mockBooks.map(book => book.genre)));
@@ -148,6 +151,17 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
     return loggedBooks.some(book => book.id === bookId);
   };
 
+  const getLoggedBook = (bookId: string): LoggedBook | null => {
+    return loggedBooks.find(book => book.id === bookId) || null;
+  };
+
+  const handleBookCardClick = (book: Book) => {
+    // If book is logged, use the logged version to show review
+    const loggedBook = getLoggedBook(book.id);
+    setSelectedBookForDetail(loggedBook || book);
+    setDetailModalOpen(true);
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setFilterGenre('all');
@@ -160,7 +174,11 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
   const searchResults = mode === 'searching' ? getSearchResults() : [];
 
   const renderBookCard = (book: Book) => (
-    <Card key={book.id} className="overflow-hidden hover:shadow-lg transition">
+    <Card 
+      key={book.id} 
+      className="overflow-hidden hover:shadow-lg transition cursor-pointer"
+      onClick={() => handleBookCardClick(book)}
+    >
       <img
         src={book.coverUrl}
         alt={book.title}
@@ -178,9 +196,12 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
         <p className="text-sm text-gray-700 mb-4 line-clamp-3">{book.description}</p>
         
         <Button
-          onClick={() => handleLogBook(book)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLogBook(book);
+          }}
           disabled={isBookLogged(book.id)}
-          className="w-full"
+          className="w-full cursor-pointer"
           variant={isBookLogged(book.id) ? "secondary" : "default"}
         >
           {isBookLogged(book.id) ? 'Already Logged' : 'Log This Book'}
@@ -427,6 +448,24 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
           open={logDialogOpen}
           onOpenChange={setLogDialogOpen}
           onSave={handleSaveLog}
+        />
+      )}
+
+      {/* Book Detail Modal */}
+      {selectedBookForDetail && (
+        <BookDetailModal
+          book={selectedBookForDetail}
+          open={detailModalOpen}
+          onOpenChange={setDetailModalOpen}
+          onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
+            const newLoggedBook: LoggedBook = {
+              ...book,
+              ...logData,
+              loggedDate: new Date().toISOString().split('T')[0]
+            };
+            onAddBook(newLoggedBook);
+            setDetailModalOpen(false);
+          } : undefined}
         />
       )}
     </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
+import { UserProfile } from './components/UserProfile';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -24,14 +25,40 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
-  if (!isAuthenticated) {
-    return <AuthPage onLogin={handleLogin} onSignup={handleSignup} />;
-  }
-
   return (
-    <Dashboard 
-      user={currentUser!} 
-      onLogout={handleLogout}
-    />
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            !isAuthenticated ? (
+              <AuthPage onLogin={handleLogin} onSignup={handleSignup} />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            isAuthenticated ? (
+              <Dashboard user={currentUser!} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <UserProfile user={currentUser!} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
