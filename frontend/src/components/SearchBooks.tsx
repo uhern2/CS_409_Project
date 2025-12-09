@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, SlidersHorizontal, Sparkles, TrendingUp, Star } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -37,45 +37,94 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
   const [sortBy, setSortBy] = useState('title');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [logDialogOpen, setLogDialogOpen] = useState(false);
+  const [mode, setMode] = useState<'explore' | 'searching'>('explore');
 
   // Get unique genres and authors
   const genres = Array.from(new Set(mockBooks.map(book => book.genre)));
   const authors = Array.from(new Set(mockBooks.map(book => book.author))).sort();
 
-  // Filter books
-  let filteredBooks = mockBooks.filter(book => {
-    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         book.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGenre = filterGenre === 'all' || book.genre === filterGenre;
-    const matchesAuthor = filterAuthor === 'all' || book.author === filterAuthor;
+  // Check if user is actively searching/filtering
+  const hasActiveFilters = filterGenre !== 'all' || filterAuthor !== 'all' || yearFrom || yearTo;
+  const isSearching = searchQuery.trim() !== '' || hasActiveFilters;
+
+  // Update mode based on search state
+  useEffect(() => {
+    setMode(isSearching ? 'searching' : 'explore');
+  }, [isSearching]);
+
+  // Get recommendations (mock logic - you can make this smarter)
+  const getRecommendations = () => {
+    // Get user's favorite genres from logged books
+    const userGenres = loggedBooks.map(book => book.genre);
+    const genreCounts = userGenres.reduce((acc, genre) => {
+      acc[genre] = (acc[genre] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
     
-    let matchesYear = true;
-    if (yearFrom) {
-      matchesYear = matchesYear && book.yearPublished >= parseInt(yearFrom);
-    }
-    if (yearTo) {
-      matchesYear = matchesYear && book.yearPublished <= parseInt(yearTo);
-    }
+    const favoriteGenre = Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a])[0];
 
-    return matchesSearch && matchesGenre && matchesAuthor && matchesYear;
-  });
+    // Filter out already logged books
+    const unloggedBooks = mockBooks.filter(book => !isBookLogged(book.id));
 
-  // Sort books
-  filteredBooks = [...filteredBooks].sort((a, b) => {
-    switch (sortBy) {
-      case 'title':
-        return a.title.localeCompare(b.title);
-      case 'author':
-        return a.author.localeCompare(b.author);
-      case 'year':
-        return b.yearPublished - a.yearPublished;
-      case 'year-asc':
-        return a.yearPublished - b.yearPublished;
-      default:
-        return 0;
-    }
-  });
+    // Recommendations based on favorite genre
+    const genreRecs = favoriteGenre 
+      ? unloggedBooks.filter(book => book.genre === favoriteGenre).slice(0, 4)
+      : [];
+
+    // Popular/Trending books (newest books)
+    const trending = unloggedBooks
+      .sort((a, b) => b.yearPublished - a.yearPublished)
+      .slice(0, 4);
+
+    // Highly rated (mock - you could add ratings to books)
+    const popular = unloggedBooks
+      .slice(0, 4);
+
+    return {
+      forYou: genreRecs,
+      trending,
+      popular
+    };
+  };
+
+  // Filter and sort books for search mode
+  const getSearchResults = () => {
+    let filtered = mockBooks.filter(book => {
+      const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           book.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGenre = filterGenre === 'all' || book.genre === filterGenre;
+      const matchesAuthor = filterAuthor === 'all' || book.author === filterAuthor;
+      
+      let matchesYear = true;
+      if (yearFrom) {
+        matchesYear = matchesYear && book.yearPublished >= parseInt(yearFrom);
+      }
+      if (yearTo) {
+        matchesYear = matchesYear && book.yearPublished <= parseInt(yearTo);
+      }
+
+      return matchesSearch && matchesGenre && matchesAuthor && matchesYear;
+    });
+
+    // Sort books
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'author':
+          return a.author.localeCompare(b.author);
+        case 'year':
+          return b.yearPublished - a.yearPublished;
+        case 'year-asc':
+          return a.yearPublished - b.yearPublished;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
 
   const handleLogBook = (book: Book) => {
     setSelectedBook(book);
@@ -100,19 +149,58 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
   };
 
   const clearFilters = () => {
+    setSearchQuery('');
     setFilterGenre('all');
     setFilterAuthor('all');
     setYearFrom('');
     setYearTo('');
   };
 
-  const hasActiveFilters = filterGenre !== 'all' || filterAuthor !== 'all' || yearFrom || yearTo;
+  const recommendations = mode === 'explore' ? getRecommendations() : null;
+  const searchResults = mode === 'searching' ? getSearchResults() : [];
+
+  const renderBookCard = (book: Book) => (
+    <Card key={book.id} className="overflow-hidden hover:shadow-lg transition">
+      <img
+        src={book.coverUrl}
+        alt={book.title}
+        className="w-full h-64 object-cover"
+      />
+      <CardContent className="p-4">
+        <h3 className="text-gray-900 mb-1 line-clamp-2">{book.title}</h3>
+        <p className="text-sm text-gray-600 mb-2">{book.author}</p>
+        
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="secondary">{book.genre}</Badge>
+          <span className="text-xs text-gray-500">{book.yearPublished}</span>
+        </div>
+
+        <p className="text-sm text-gray-700 mb-4 line-clamp-3">{book.description}</p>
+        
+        <Button
+          onClick={() => handleLogBook(book)}
+          disabled={isBookLogged(book.id)}
+          className="w-full"
+          variant={isBookLogged(book.id) ? "secondary" : "default"}
+        >
+          {isBookLogged(book.id) ? 'Already Logged' : 'Log This Book'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-3xl text-gray-900 mb-2">Search Books</h2>
-        <p className="text-gray-600">Discover your next great read with advanced filtering</p>
+        <h2 className="text-3xl text-gray-900 mb-2">
+          {mode === 'explore' ? 'Explore Books' : 'Search Results'}
+        </h2>
+        <p className="text-gray-600">
+          {mode === 'explore' 
+            ? 'Discover personalized recommendations and trending titles'
+            : 'Find your next great read with advanced filtering'
+          }
+        </p>
       </div>
 
       {/* Search Bar */}
@@ -210,7 +298,7 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
 
                 {hasActiveFilters && (
                   <Button variant="outline" onClick={clearFilters} className="w-full">
-                    Clear Filters
+                    Clear All
                   </Button>
                 )}
               </div>
@@ -219,109 +307,118 @@ export function SearchBooks({ onAddBook, loggedBooks }: SearchBooksProps) {
         </div>
       </div>
 
-      {/* Desktop Filters */}
-      <div className="hidden md:block bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex items-center mb-4">
-          <Filter className="w-5 h-5 mr-2 text-gray-600" />
-          <span className="text-gray-700">Advanced Filters</span>
-          {hasActiveFilters && (
-            <Button variant="ghost" onClick={clearFilters} className="ml-auto text-sm">
-              Clear Filters
-            </Button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Select value={filterGenre} onValueChange={setFilterGenre}>
-            <SelectTrigger>
-              <SelectValue placeholder="Genre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Genres</SelectItem>
-              {genres.map(genre => (
-                <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filterAuthor} onValueChange={setFilterAuthor}>
-            <SelectTrigger>
-              <SelectValue placeholder="Author" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Authors</SelectItem>
-              {authors.map(author => (
-                <SelectItem key={author} value={author}>{author}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Input
-            type="number"
-            placeholder="Year From"
-            value={yearFrom}
-            onChange={(e) => setYearFrom(e.target.value)}
-          />
-
-          <Input
-            type="number"
-            placeholder="Year To"
-            value={yearTo}
-            onChange={(e) => setYearTo(e.target.value)}
-          />
-
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="title">Title (A-Z)</SelectItem>
-              <SelectItem value="author">Author (A-Z)</SelectItem>
-              <SelectItem value="year">Year (Newest)</SelectItem>
-              <SelectItem value="year-asc">Year (Oldest)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Results Count */}
-      <div className="mb-4">
-        <p className="text-gray-600">
-          Showing {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'}
-        </p>
-      </div>
-
-      {/* Books Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredBooks.map(book => (
-          <Card key={book.id} className="overflow-hidden hover:shadow-lg transition">
-            <img
-              src={book.coverUrl}
-              alt={book.title}
-              className="w-full h-64 object-cover"
-            />
-            <CardContent className="p-4">
-              <h3 className="text-gray-900 mb-1 line-clamp-2">{book.title}</h3>
-              <p className="text-sm text-gray-600 mb-2">{book.author}</p>
-              
-              <div className="flex items-center gap-2 mb-3">
-                <Badge variant="secondary">{book.genre}</Badge>
-                <span className="text-xs text-gray-500">{book.yearPublished}</span>
-              </div>
-
-              <p className="text-sm text-gray-700 mb-4 line-clamp-3">{book.description}</p>
-              
-              <Button
-                onClick={() => handleLogBook(book)}
-                disabled={isBookLogged(book.id)}
-                className="w-full"
-                variant={isBookLogged(book.id) ? "secondary" : "default"}
-              >
-                {isBookLogged(book.id) ? 'Already Logged' : 'Log This Book'}
+      {/* Desktop Filters - Only show when searching */}
+      {mode === 'searching' && (
+        <div className="hidden md:block bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center mb-4">
+            <Filter className="w-5 h-5 mr-2 text-gray-600" />
+            <span className="text-gray-700">Advanced Filters</span>
+            {(hasActiveFilters || searchQuery) && (
+              <Button variant="ghost" onClick={clearFilters} className="ml-auto text-sm">
+                Clear All
               </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <Select value={filterGenre} onValueChange={setFilterGenre}>
+              <SelectTrigger>
+                <SelectValue placeholder="Genre" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genres</SelectItem>
+                {genres.map(genre => (
+                  <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterAuthor} onValueChange={setFilterAuthor}>
+              <SelectTrigger>
+                <SelectValue placeholder="Author" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Authors</SelectItem>
+                {authors.map(author => (
+                  <SelectItem key={author} value={author}>{author}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              placeholder="Year From"
+              value={yearFrom}
+              onChange={(e) => setYearFrom(e.target.value)}
+            />
+
+            <Input
+              type="number"
+              placeholder="Year To"
+              value={yearTo}
+              onChange={(e) => setYearTo(e.target.value)}
+            />
+
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title">Title (A-Z)</SelectItem>
+                <SelectItem value="author">Author (A-Z)</SelectItem>
+                <SelectItem value="year">Year (Newest)</SelectItem>
+                <SelectItem value="year-asc">Year (Oldest)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/*Recommendations */}
+      {mode === 'explore' && recommendations && (
+        <div className="space-y-8">
+          {/* Recommended for You */}
+          {recommendations.forYou.length > 0 && (
+            <div>
+              <div className="flex items-center mb-4">
+                <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+                <h3 className="text-2xl text-gray-900">Recommended for You</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {recommendations.forYou.map(renderBookCard)}
+              </div>
+            </div>
+          )}
+         
+        </div>
+      )}
+
+      {/* Search */}
+      {mode === 'searching' && (
+        <>
+          <div className="mb-4">
+            <p className="text-gray-600">
+              Showing {searchResults.length} {searchResults.length === 1 ? 'book' : 'books'}
+            </p>
+          </div>
+
+          {searchResults.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl text-gray-900 mb-2">No books found</h3>
+              <p className="text-gray-600 mb-4">
+                Try adjusting your search or filters
+              </p>
+              <Button variant="outline" onClick={clearFilters}>
+                Clear All Filters
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {searchResults.map(renderBookCard)}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Log Book Dialog */}
       {selectedBook && (
