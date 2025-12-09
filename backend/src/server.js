@@ -6,6 +6,7 @@ import { connectDB } from "./db.js";
 import { fakeAuth } from "./middleware/fakeAuth.js";
 import { booksRouter } from "./routes/books.js";
 import { logsRouter } from "./routes/logs.js";
+import { usersRouter } from "./routes/users.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => {
 // Routes
 app.use("/books", booksRouter);
 app.use("/logs", logsRouter);
+app.use("/users", usersRouter);
 
 const PORT = process.env.PORT || 4000;
 

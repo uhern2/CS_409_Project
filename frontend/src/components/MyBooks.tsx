@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LoggedBook } from '../types/book';
 import { LogBookDialog } from './LogBookDialog';
+import { BookDetailModal } from './BookDetailModal';
 import {
   Select,
   SelectContent,
@@ -43,6 +44,8 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
   const [bookToDelete, setBookToDelete] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [bookToEdit, setBookToEdit] = useState<LoggedBook | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedBookForDetail, setSelectedBookForDetail] = useState<LoggedBook | null>(null);
 
   // Get unique genres from logged books
   const genres = Array.from(new Set(loggedBooks.map(book => book.genre)));
@@ -98,6 +101,11 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
     onUpdateBook(bookToEdit.id, updates);
     setEditDialogOpen(false);
     setBookToEdit(null);
+  };
+
+  const handleBookCardClick = (book: LoggedBook) => {
+    setSelectedBookForDetail(book);
+    setDetailModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -169,7 +177,11 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBooks.map(book => (
-            <Card key={book.id} className="overflow-hidden hover:shadow-lg transition">
+            <Card 
+              key={book.id} 
+              className="overflow-hidden hover:shadow-lg transition cursor-pointer"
+              onClick={() => handleBookCardClick(book)}
+            >
               <div className="flex">
                 <img
                   src={book.coverUrl}
@@ -182,12 +194,12 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
                       <h3 className="text-gray-900 mb-1 line-clamp-2">{book.title}</h3>
                       <p className="text-sm text-gray-600 mb-2">{book.author}</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditClick(book)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 transition-transform"
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 transition-transform cursor-pointer"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -195,7 +207,7 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteClick(book.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -253,6 +265,19 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
             rating: bookToEdit.rating,
           }}
           onSave={handleUpdateLog}
+        />
+      )}
+
+      {/* Book Detail Modal */}
+      {selectedBookForDetail && (
+        <BookDetailModal
+          book={selectedBookForDetail}
+          open={detailModalOpen}
+          onOpenChange={setDetailModalOpen}
+          onUpdateBook={(bookId, updates) => {
+            onUpdateBook(bookId, updates);
+            setDetailModalOpen(false);
+          }}
         />
       )}
     </div>
