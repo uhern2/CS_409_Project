@@ -20,9 +20,10 @@ From the project root folder:
 ```bash
 cd backend
 npm install
+```
 
 
-## 🗂 2. Set Up Your MongoDB Atlas Access
+# 🗂 2. Set Up Your MongoDB Atlas Access
 
 The MongoDB Atlas **cluster already exists**, but every teammate must create **their own database user**.  
 Being added to the Atlas project is not enough — you still need a DB user.
@@ -51,7 +52,7 @@ Do **not** share credentials or reuse someone else’s DB user.
 
 ---
 
-## 🔗 3. Generate Your Personal Connection String
+# 🔗 3. Generate Your Personal Connection String
 
 Now you’ll get the connection URI that your backend will use.
 
@@ -66,7 +67,7 @@ Now you’ll get the connection URI that your backend will use.
    ```text
    mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 
-## 4. Create Your .env File
+# 4. Create Your .env File
 
 Everyone keeps their own connection string in a private .env file.
 This file is not committed to Git (it’s in .gitignore).
@@ -77,6 +78,7 @@ From the backend/ folder:
 
 ```bash
 touch .env
+```
 
 ### 4.2 Add Required Environment Variables
 
@@ -86,7 +88,7 @@ Open .env in your editor and add:
 MONGODB_URI=mongodb+srv://<your-username>:<your-password>@cluster0.xxxxx.mongodb.net/booklog?retryWrites=true&w=majority
 PORT=4000
 JWT_SECRET=dev-secret-key
-
+```
 
 Replace:
 
@@ -99,7 +101,7 @@ cluster0.xxxxx.mongodb.net → whatever your cluster host is
 🔒 Do not commit .env to GitHub.
 Everyone on the team will have their own .env with their own credentials.
 
-## 5. Run the Backend Server
+# 5. Run the Backend Server
 
 Once your dependencies and .env are set up, you can start the backend.
 
@@ -109,12 +111,14 @@ From the backend/ folder:
 
 ```bash
 npm run dev
+```
 
 If everything is configured correctly, you should see logs similar to:
 
 ```text
 Server running on port 4000
 MongoDB connected successfully
+```
 
 ### 5.2 Test the Health Route
 
@@ -127,11 +131,12 @@ http://localhost:4000/health
 You should see JSON like:
 ```text
 { "ok": true }
+```
 
 
 If you see that, your backend and MongoDB connection are working.
 
-## 7. Backend Project Structure (Overview)
+# 6. Backend Project Structure (Overview)
 
 Typical structure:
 
@@ -146,14 +151,16 @@ backend/
   .gitignore        # ensures node_modules and .env are not committed
   package.json
   package-lock.json
+```
 
-## 8. Files That Must NOT Be Committed
+# 7. Files That Must NOT Be Committed
 
 Ensure that .gitignore in backend/ contains at least:
 
 ```text
 node_modules/
 .env
+```
 
 
 node_modules/ is huge and is recreated from package.json using npm install.

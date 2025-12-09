@@ -3,18 +3,16 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./db.js";
-import { fakeAuth } from "./middleware/fakeAuth.js";
 import { booksRouter } from "./routes/books.js";
 import { logsRouter } from "./routes/logs.js";
 import { usersRouter } from "./routes/users.js";
+import { authRouter } from "./routes/auth.js";
+import { requireAuth } from "./middleware/requireAuth.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// dev-only fake auth: attaches req.user
-app.use(fakeAuth);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -22,9 +20,10 @@ app.get("/health", (req, res) => {
 });
 
 // Routes
+app.use("/auth", authRouter);
 app.use("/books", booksRouter);
-app.use("/logs", logsRouter);
-app.use("/users", usersRouter);
+app.use("/logs", requireAuth, logsRouter);
+app.use("/users", requireAuth, usersRouter);
 
 const PORT = process.env.PORT || 4000;
 
