@@ -133,11 +133,11 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
         }
         const data: Book[] = await res.json();
         if (!aborted) {
-          setRemoteBooks(data);
           // Import remote books to local DB so recommendations can include them
           const toImport = data.filter(b => !isObjectId(b.id));
+          let importedMap: Record<string, string> = {};
           if (toImport.length) {
-            await Promise.all(
+            const results = await Promise.all(
               toImport.map(book =>
                 fetch('http://localhost:4000/books/import', {
                   method: 'POST',
@@ -155,11 +155,25 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
                     description: book.description,
                     pages: book.pages,
                   }),
-                })
+                }).then(async r => (r.ok ? r.json() : null))
               )
             );
+            importedMap = results
+              .filter(Boolean)
+              .reduce((acc: Record<string, string>, item: any) => {
+                if (item?.googleBooksId) acc[item.googleBooksId] = item.id;
+                return acc;
+              }, {});
             await fetchBooks();
           }
+          const mergedRemote = data.map(b => {
+            const gbId = (b as any).googleBooksId || b.id;
+            if (importedMap[gbId]) {
+              return { ...b, id: importedMap[gbId] };
+            }
+            return b;
+          });
+          setRemoteBooks(mergedRemote);
         }
       } catch (err) {
         console.error('Error searching remote books:', err);
