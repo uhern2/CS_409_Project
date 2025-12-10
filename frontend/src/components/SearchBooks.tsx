@@ -23,6 +23,8 @@ import {
 import { LogBookDialog } from './LogBookDialog';
 import { BookDetailModal } from './BookDetailModal';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 interface SearchBooksProps {
   onAddBook: (book: LoggedBook) => void;
   loggedBooks: LoggedBook[];
@@ -55,7 +57,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
       setLoading(true);
       setError(null);
 
-      const res = await fetch('http://localhost:4000/books');
+      const res = await fetch(`${API_BASE_URL}/books`);
       if (!res.ok) {
         throw new Error(`Request failed with status ${res.status}`);
       }
@@ -64,13 +66,13 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
 
       if (data.length === 0) {
         // Fallback to Google Books search if no seeded/local data
-        const googleRes = await fetch('http://localhost:4000/books/search?q=popular');
+        const googleRes = await fetch(`${API_BASE_URL}/books/search?q=popular`);
         if (googleRes.ok) {
           const googleData: Book[] = await googleRes.json();
           // Import these so explore/recommendations work off real DB ids
           await Promise.all(
             googleData.map(book =>
-              fetch('http://localhost:4000/books/import', {
+                fetch(`${API_BASE_URL}/books/import`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -91,7 +93,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
           );
 
           // Refetch local books now that they are imported
-          const refetch = await fetch('http://localhost:4000/books');
+          const refetch = await fetch(`${API_BASE_URL}/books`);
           const importedData: Book[] = refetch.ok ? await refetch.json() : [];
           setBooks(importedData);
         } else {
@@ -127,7 +129,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
       try {
         setRemoteLoading(true);
         setRemoteError(null);
-        const res = await fetch(`http://localhost:4000/books/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`${API_BASE_URL}/books/search?q=${encodeURIComponent(q)}`);
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
@@ -139,7 +141,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
           if (toImport.length) {
             const results = await Promise.all(
               toImport.map(book =>
-                fetch('http://localhost:4000/books/import', {
+                fetch(`${API_BASE_URL}/books/import`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',

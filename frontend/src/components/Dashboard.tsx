@@ -6,6 +6,8 @@ import { MyBooks } from './MyBooks';
 import { SearchBooks } from './SearchBooks';
 import { LoggedBook } from '../types/book';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 interface DashboardProps {
   user: { name: string; email: string };
   authToken: string;
@@ -24,7 +26,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
     async function fetchLoggedBooks() {
       if (!authToken) return;
       try {
-        const res = await fetch('http://localhost:4000/logs/me', {
+        const res = await fetch(`${API_BASE_URL}/logs/me`, {
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
@@ -49,7 +51,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
       // If the book id doesn't look like a Mongo ObjectId, try importing it first
       const isObjectId = /^[0-9a-fA-F]{24}$/.test(bookId);
       if (!isObjectId) {
-        const importRes = await fetch('http://localhost:4000/books/import', {
+        const importRes = await fetch(`${API_BASE_URL}/books/import`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -75,7 +77,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
         bookId = imported.id;
       }
 
-      const res = await fetch('http://localhost:4000/logs', {
+      const res = await fetch(`${API_BASE_URL}/logs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
     setLoggedBooks(prev => prev.filter(book => book.logId !== logId));
 
     try {
-      const res = await fetch(`http://localhost:4000/logs/${logId}`, {
+      const res = await fetch(`${API_BASE_URL}/logs/${logId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -144,7 +146,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
       )
     );
 
-    fetch(`http://localhost:4000/logs/${logId}`, {
+    fetch(`${API_BASE_URL}/logs/${logId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

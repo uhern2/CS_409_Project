@@ -11,6 +11,8 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { LogBookDialog } from './LogBookDialog';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 interface BookDetailModalProps {
   book: Book | LoggedBook;
   open: boolean;
@@ -69,7 +71,7 @@ export function BookDetailModal({ book, open, onOpenChange, authToken, onLogBook
       setDetailLoading(true);
       setDetailError(null);
       try {
-        const res = await fetch(`http://localhost:4000/books/${baseBook.id}`, {
+        const res = await fetch(`${API_BASE_URL}/books/${baseBook.id}`, {
           headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
         });
         if (!res.ok) {
