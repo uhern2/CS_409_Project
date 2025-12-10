@@ -106,8 +106,12 @@ export function AuthPage({ onLogin, onSignup }: AuthPageProps) {
                       type="password"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
+                      minLength={8}
                       required
                     />
+                    <p className="text-sm text-gray-500">
+                      Password must be at least 8 characters.
+                    </p>
                   </div>
                   <Button type="submit" className="w-full">Sign Up</Button>
                 </form>

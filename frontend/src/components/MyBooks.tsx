@@ -38,11 +38,14 @@ interface Review {
 
 interface MyBooksProps {
   loggedBooks: LoggedBook[];
-  currentUserId: string;
-  currentUserName: string;
-  reviews: Review[];
-  onDeleteBook: (bookId: string) => void;
-  onUpdateBook: (bookId: string, updates: {
+  authToken?: string;
+  onDeleteBook: (logId: string) => void;
+  onUpdateBook: (logId: string, updates: {
+//   currentUserId: string;
+//   currentUserName: string;
+//   reviews: Review[];
+//   onDeleteBook: (bookId: string) => void;
+//   onUpdateBook: (bookId: string, updates: {
     startDate: string;
     finishDate: string;
     review: string;
@@ -53,7 +56,8 @@ interface MyBooksProps {
   onDeleteReview: (reviewId: string) => void;
 }
 
-export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, onDeleteBook, onUpdateBook, onAddReview, onUpdateReview, onDeleteReview }: MyBooksProps) {
+export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: MyBooksProps) {
+// export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, onDeleteBook, onUpdateBook, onAddReview, onUpdateReview, onDeleteReview }: MyBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
@@ -90,8 +94,8 @@ export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, 
     }
   });
 
-  const handleDeleteClick = (bookId: string) => {
-    setBookToDelete(bookId);
+  const handleDeleteClick = (logId: string) => {
+    setBookToDelete(logId);
     setDeleteDialogOpen(true);
   };
 
@@ -110,7 +114,7 @@ export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, 
     rating: number;
   }) => {
     if (!bookToEdit) return;
-    onUpdateBook(bookToEdit.id, updates);
+    onUpdateBook(bookToEdit.logId, updates);
     setEditDialogOpen(false);
     setBookToEdit(null);
   };
@@ -185,7 +189,7 @@ export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBooks.map(book => (
             <Card 
-              key={book.id} 
+              key={book.logId} 
               className="overflow-hidden hover:shadow-lg transition cursor-pointer"
               onClick={() => {
                 setBookForDetail(book);
@@ -220,11 +224,13 @@ export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(book.id);
-                        }}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform"
+                        onClick={() => handleDeleteClick(book.logId)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform cursor-pointer"
+//                         onClick={(e) => {
+//                           e.stopPropagation();
+//                           handleDeleteClick(book.id);
+//                         }}
+//                         className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -294,10 +300,15 @@ export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, 
           reviews={reviews.filter(r => r.bookId === bookForDetail.id)}
           open={detailModalOpen}
           onOpenChange={setDetailModalOpen}
-          onUpdateBook={onUpdateBook}
+          authToken={authToken}
+          onUpdateBook={(logId, updates) => {
+            onUpdateBook(logId, updates);
+            setDetailModalOpen(false);
+          }}
+<!--           onUpdateBook={onUpdateBook}
           onAddReview={onAddReview}
           onUpdateReview={onUpdateReview}
-          onDeleteReview={onDeleteReview}
+          onDeleteReview={onDeleteReview} -->
         />
       )}
     </div>

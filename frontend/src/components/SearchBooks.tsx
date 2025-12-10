@@ -4,7 +4,6 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { mockBooks } from '../data/mockBooks';
 import { Book, LoggedBook } from '../types/book';
 import {
   Select,
@@ -27,26 +26,30 @@ import { BookDetailModal } from './BookDetailModal';
 interface SearchBooksProps {
   onAddBook: (book: LoggedBook) => void;
   loggedBooks: LoggedBook[];
-  currentUserId: string;
-  currentUserName: string;
-  reviews: Review[];  // This line must be included
-  onAddReview: (review: Review) => void;
-  onUpdateReview: (reviewId: string, updates: { rating: number; text: string }) => void;
-  onDeleteReview: (reviewId: string) => void;
+  authToken?: string;
 }
 
-interface Review {
-  id: string;
-  bookId: string;
-  userId: string;
-  userName: string;
-  rating: number;
-  text: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksProps) {
+//   currentUserId: string;
+//   currentUserName: string;
+//   reviews: Review[];  // This line must be included
+//   onAddReview: (review: Review) => void;
+//   onUpdateReview: (reviewId: string, updates: { rating: number; text: string }) => void;
+//   onDeleteReview: (reviewId: string) => void;
+// }
 
-export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUserName, reviews, onAddReview, onDeleteReview, onUpdateReview}: SearchBooksProps) {
+// interface Review {
+//   id: string;
+//   bookId: string;
+//   userId: string;
+//   userName: string;
+//   rating: number;
+//   text: string;
+//   createdAt: string;
+//   updatedAt?: string;
+// }
+
+// export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUserName, reviews, onAddReview, onDeleteReview, onUpdateReview}: SearchBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [filterAuthor, setFilterAuthor] = useState('all');
@@ -58,10 +61,37 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
   const [mode, setMode] = useState<'explore' | 'searching'>('explore');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBookForDetail, setSelectedBookForDetail] = useState<Book | LoggedBook | null>(null);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchBooks() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch('http://localhost:4000/books');
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
+        const data: Book[] = await res.json();
+        setBooks(data);
+      } catch (err) {
+        console.error('Error fetching books:', err);
+        setError('Failed to load books. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBooks();
+  }, []);
 
   // Get unique genres and authors
-  const genres = Array.from(new Set(mockBooks.map(book => book.genre)));
-  const authors = Array.from(new Set(mockBooks.map(book => book.author))).sort();
+  const genres = Array.from(new Set(books.map(book => book.genre)));
+  const authors = Array.from(new Set(books.map(book => book.author))).sort();
 
   // Check if user is actively searching/filtering
   const hasActiveFilters = filterGenre !== 'all' || filterAuthor !== 'all' || yearFrom || yearTo;
@@ -84,7 +114,7 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
     const favoriteGenre = Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a])[0];
 
     // Filter out already logged books
-    const unloggedBooks = mockBooks.filter(book => !isBookLogged(book.id));
+    const unloggedBooks = books.filter(book => !isBookLogged(book.id));
 
     // Recommendations based on favorite genre
     const genreRecs = favoriteGenre 
@@ -109,7 +139,7 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
 
   // Filter and sort books for search mode
   const getSearchResults = () => {
-    let filtered = mockBooks.filter(book => {
+    let filtered = books.filter(book => {
       const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            book.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -155,6 +185,7 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
     if (selectedBook) {
       const newLoggedBook: LoggedBook = {
         ...selectedBook,
+        logId: crypto.randomUUID?.() || `temp-${Date.now()}`,
         ...logData,
         loggedDate: new Date().toISOString().split('T')[0]
       };
@@ -240,6 +271,14 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
           }
         </p>
       </div>
+
+      {loading && (
+        <p className="text-gray-600 mb-4">Loading books...</p>
+      )}
+
+      {error && !loading && (
+        <p className="text-red-500 mb-4">{error}</p>
+      )}
 
       {/* Search Bar */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
@@ -411,12 +450,38 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
         </div>
       )}
 
-     {/* Recommendations */}
-    {mode === 'explore' && recommendations && recommendations.forYou.length > 0 && (
-      <div>
-        <div className="flex items-center mb-4">
-          <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
-          <h3 className="text-2xl text-gray-900">Recommended for You</h3>
+      {/*Recommendations / All Books fallback */}
+      {mode === 'explore' && recommendations && (
+        <div className="space-y-8">
+          {/* Recommended for You */}
+          {recommendations.forYou.length > 0 ? (
+            <div>
+              <div className="flex items-center mb-4">
+                <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+                <h3 className="text-2xl text-gray-900">Recommended for You</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {recommendations.forYou.map(renderBookCard)}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center mb-4">
+                <TrendingUp className="w-6 h-6 text-indigo-600 mr-2" />
+                <h3 className="text-2xl text-gray-900">Browse All Books</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {books.map(renderBookCard)}
+              </div>
+            </div>
+          )}
+         
+//      {/* Recommendations */}
+//     {mode === 'explore' && recommendations && recommendations.forYou.length > 0 && (
+//       <div>
+//         <div className="flex items-center mb-4">
+//           <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+//           <h3 className="text-2xl text-gray-900">Recommended for You</h3>
         </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {recommendations.forYou.map(renderBookCard)}
@@ -463,29 +528,47 @@ export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUser
       )}
 
       {/* Book Detail Modal */}
-      {/* Book Detail Modal */}
-{selectedBookForDetail && (
-  <BookDetailModal
-    book={selectedBookForDetail}
-    currentUserId={currentUserId}
-    currentUserName={currentUserName}
-    reviews={reviews.filter(r => r.bookId === selectedBookForDetail.id)}
-    open={detailModalOpen}
-    onOpenChange={setDetailModalOpen}
-    onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
-      const newLoggedBook: LoggedBook = {
-        ...book,
-        ...logData,
-        loggedDate: new Date().toISOString().split('T')[0]
-      };
-      onAddBook(newLoggedBook);
-      setDetailModalOpen(false);
-    } : undefined}
-    onAddReview={onAddReview}
-    onUpdateReview={onUpdateReview}
-    onDeleteReview={onDeleteReview}
-  />
-)}
+      {selectedBookForDetail && (
+        <BookDetailModal
+          book={selectedBookForDetail}
+          open={detailModalOpen}
+          onOpenChange={setDetailModalOpen}
+          authToken={authToken}
+          onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
+            const newLoggedBook: LoggedBook = {
+              ...book,
+              logId: crypto.randomUUID?.() || `temp-${Date.now()}`,
+              ...logData,
+              loggedDate: new Date().toISOString().split('T')[0]
+            };
+            onAddBook(newLoggedBook);
+            setDetailModalOpen(false);
+          } : undefined}
+        />
+      )}
+//       {/* Book Detail Modal */}
+// {selectedBookForDetail && (
+//   <BookDetailModal
+//     book={selectedBookForDetail}
+//     currentUserId={currentUserId}
+//     currentUserName={currentUserName}
+//     reviews={reviews.filter(r => r.bookId === selectedBookForDetail.id)}
+//     open={detailModalOpen}
+//     onOpenChange={setDetailModalOpen}
+//     onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
+//       const newLoggedBook: LoggedBook = {
+//         ...book,
+//         ...logData,
+//         loggedDate: new Date().toISOString().split('T')[0]
+//       };
+//       onAddBook(newLoggedBook);
+//       setDetailModalOpen(false);
+//     } : undefined}
+//     onAddReview={onAddReview}
+//     onUpdateReview={onUpdateReview}
+//     onDeleteReview={onDeleteReview}
+//   />
+// )}
     </div>
   );
 }
