@@ -21,7 +21,7 @@ interface UserProfileData {
 
 const API_BASE_URL = 'http://localhost:4000';
 
-export function UserProfile({ user: initialUser, authToken, onLogout }: UserProfileProps) {
+export function UserProfile({ user: initialUser, authToken, onLogout, refreshSignal }: UserProfileProps) {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,12 +94,11 @@ export function UserProfile({ user: initialUser, authToken, onLogout }: UserProf
     try {
       setIsSaving(true);
       setError(null);
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ name: editedName.trim() }),
       });
