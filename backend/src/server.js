@@ -11,7 +11,10 @@ import { requireAuth } from "./middleware/requireAuth.js";
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "https://cs-409-frontend.onrender.com",
+  credentials: true
+}));
 app.use(express.json());
 
 // Health check
