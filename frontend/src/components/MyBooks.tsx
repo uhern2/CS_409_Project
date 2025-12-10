@@ -25,19 +25,39 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 
+interface Review {
+  id: string;
+  bookId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface MyBooksProps {
   loggedBooks: LoggedBook[];
   authToken?: string;
   onDeleteBook: (logId: string) => void;
   onUpdateBook: (logId: string, updates: {
+//   currentUserId: string;
+//   currentUserName: string;
+//   reviews: Review[];
+//   onDeleteBook: (bookId: string) => void;
+//   onUpdateBook: (bookId: string, updates: {
     startDate: string;
     finishDate: string;
     review: string;
     rating: number;
   }) => void;
+  onAddReview: (review: Review) => void;
+  onUpdateReview: (reviewId: string, updates: { rating: number; text: string }) => void;
+  onDeleteReview: (reviewId: string) => void;
 }
 
 export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: MyBooksProps) {
+// export function MyBooks({ loggedBooks, currentUserId, currentUserName, reviews, onDeleteBook, onUpdateBook, onAddReview, onUpdateReview, onDeleteReview }: MyBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
@@ -46,7 +66,7 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [bookToEdit, setBookToEdit] = useState<LoggedBook | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedBookForDetail, setSelectedBookForDetail] = useState<LoggedBook | null>(null);
+  const [bookForDetail, setBookForDetail] = useState<LoggedBook | null>(null);
 
   // Get unique genres from logged books
   const genres = Array.from(new Set(loggedBooks.map(book => book.genre)));
@@ -87,11 +107,6 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
     setBookToDelete(null);
   };
 
-  const handleEditClick = (book: LoggedBook) => {
-    setBookToEdit(book);
-    setEditDialogOpen(true);
-  };
-
   const handleUpdateLog = (updates: {
     startDate: string;
     finishDate: string;
@@ -102,11 +117,6 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
     onUpdateBook(bookToEdit.logId, updates);
     setEditDialogOpen(false);
     setBookToEdit(null);
-  };
-
-  const handleBookCardClick = (book: LoggedBook) => {
-    setSelectedBookForDetail(book);
-    setDetailModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -181,7 +191,10 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
             <Card 
               key={book.logId} 
               className="overflow-hidden hover:shadow-lg transition cursor-pointer"
-              onClick={() => handleBookCardClick(book)}
+              onClick={() => {
+                setBookForDetail(book);
+                setDetailModalOpen(true);
+              }}
             >
               <div className="flex">
                 <img
@@ -195,12 +208,16 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
                       <h3 className="text-gray-900 mb-1 line-clamp-2">{book.title}</h3>
                       <p className="text-sm text-gray-600 mb-2">{book.author}</p>
                     </div>
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEditClick(book)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 transition-transform cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBookToEdit(book);
+                          setEditDialogOpen(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 transition-transform"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -209,6 +226,11 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
                         size="sm"
                         onClick={() => handleDeleteClick(book.logId)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform cursor-pointer"
+//                         onClick={(e) => {
+//                           e.stopPropagation();
+//                           handleDeleteClick(book.id);
+//                         }}
+//                         className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -270,9 +292,12 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
       )}
 
       {/* Book Detail Modal */}
-      {selectedBookForDetail && (
+      {bookForDetail && (
         <BookDetailModal
-          book={selectedBookForDetail}
+          book={bookForDetail}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          reviews={reviews.filter(r => r.bookId === bookForDetail.id)}
           open={detailModalOpen}
           onOpenChange={setDetailModalOpen}
           authToken={authToken}
@@ -280,6 +305,10 @@ export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: 
             onUpdateBook(logId, updates);
             setDetailModalOpen(false);
           }}
+<!--           onUpdateBook={onUpdateBook}
+          onAddReview={onAddReview}
+          onUpdateReview={onUpdateReview}
+          onDeleteReview={onDeleteReview} -->
         />
       )}
     </div>

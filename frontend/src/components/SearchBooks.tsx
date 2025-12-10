@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, SlidersHorizontal, Sparkles, TrendingUp, Star } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal, Sparkles} from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -30,6 +30,26 @@ interface SearchBooksProps {
 }
 
 export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksProps) {
+//   currentUserId: string;
+//   currentUserName: string;
+//   reviews: Review[];  // This line must be included
+//   onAddReview: (review: Review) => void;
+//   onUpdateReview: (reviewId: string, updates: { rating: number; text: string }) => void;
+//   onDeleteReview: (reviewId: string) => void;
+// }
+
+// interface Review {
+//   id: string;
+//   bookId: string;
+//   userId: string;
+//   userName: string;
+//   rating: number;
+//   text: string;
+//   createdAt: string;
+//   updatedAt?: string;
+// }
+
+// export function SearchBooks({ onAddBook, loggedBooks, currentUserId, currentUserName, reviews, onAddReview, onDeleteReview, onUpdateReview}: SearchBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [filterAuthor, setFilterAuthor] = useState('all');
@@ -229,7 +249,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
             handleLogBook(book);
           }}
           disabled={isBookLogged(book.id)}
-          className="w-full cursor-pointer"
+          className="w-full"
           variant={isBookLogged(book.id) ? "secondary" : "default"}
         >
           {isBookLogged(book.id) ? 'Already Logged' : 'Log This Book'}
@@ -456,8 +476,18 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
             </div>
           )}
          
+//      {/* Recommendations */}
+//     {mode === 'explore' && recommendations && recommendations.forYou.length > 0 && (
+//       <div>
+//         <div className="flex items-center mb-4">
+//           <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+//           <h3 className="text-2xl text-gray-900">Recommended for You</h3>
         </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {recommendations.forYou.map(renderBookCard)}
+      </div>
+    </div>
+    )}
 
       {/* Search */}
       {mode === 'searching' && (
@@ -516,6 +546,29 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
           } : undefined}
         />
       )}
+//       {/* Book Detail Modal */}
+// {selectedBookForDetail && (
+//   <BookDetailModal
+//     book={selectedBookForDetail}
+//     currentUserId={currentUserId}
+//     currentUserName={currentUserName}
+//     reviews={reviews.filter(r => r.bookId === selectedBookForDetail.id)}
+//     open={detailModalOpen}
+//     onOpenChange={setDetailModalOpen}
+//     onLogBook={!('review' in selectedBookForDetail && 'rating' in selectedBookForDetail) ? (book, logData) => {
+//       const newLoggedBook: LoggedBook = {
+//         ...book,
+//         ...logData,
+//         loggedDate: new Date().toISOString().split('T')[0]
+//       };
+//       onAddBook(newLoggedBook);
+//       setDetailModalOpen(false);
+//     } : undefined}
+//     onAddReview={onAddReview}
+//     onUpdateReview={onUpdateReview}
+//     onDeleteReview={onDeleteReview}
+//   />
+// )}
     </div>
   );
 }
