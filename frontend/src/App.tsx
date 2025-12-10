@@ -4,6 +4,8 @@ import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { UserProfile } from './components/UserProfile';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
@@ -21,7 +23,7 @@ export default function App() {
         return;
       }
       try {
-        const res = await fetch('http://localhost:4000/auth/me', {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         if (!res.ok) {
@@ -44,7 +46,7 @@ export default function App() {
 
   const handleLogin = async (email: string, password: string) => {
     try {
-      const res = await fetch('http://localhost:4000/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -67,7 +69,7 @@ export default function App() {
 
   const handleSignup = async (name: string, email: string, password: string) => {
     try {
-      const res = await fetch('http://localhost:4000/auth/signup', {
+      const res = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: name, email, password }),
