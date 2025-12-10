@@ -42,32 +42,142 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBookForDetail, setSelectedBookForDetail] = useState<Book | LoggedBook | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
+  const [remoteBooks, setRemoteBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+
+  const isObjectId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
+
+  const fetchBooks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetch('http://localhost:4000/books');
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
+      const data: Book[] = await res.json();
+
+      if (data.length === 0) {
+        // Fallback to Google Books search if no seeded/local data
+        const googleRes = await fetch('http://localhost:4000/books/search?q=popular');
+        if (googleRes.ok) {
+          const googleData: Book[] = await googleRes.json();
+          // Import these so explore/recommendations work off real DB ids
+          await Promise.all(
+            googleData.map(book =>
+              fetch('http://localhost:4000/books/import', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                },
+                body: JSON.stringify({
+                  googleBooksId: (book as any).googleBooksId || book.id,
+                  title: book.title,
+                  author: book.author,
+                  genre: book.genre,
+                  yearPublished: book.yearPublished,
+                  coverUrl: book.coverUrl,
+                  description: book.description,
+                  pages: book.pages,
+                }),
+              })
+            )
+          );
+
+          // Refetch local books now that they are imported
+          const refetch = await fetch('http://localhost:4000/books');
+          const importedData: Book[] = refetch.ok ? await refetch.json() : [];
+          setBooks(importedData);
+        } else {
+          setBooks([]);
+        }
+      } else {
+        setBooks(data);
+      }
+    } catch (err) {
+      console.error('Error fetching books:', err);
+      setError('Failed to load books. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchBooks() {
-      try {
-        setLoading(true);
-        setError(null);
+    fetchBooks();
+  }, []);
 
-        const res = await fetch('http://localhost:4000/books');
+  // When user types a search query, also fetch from Google Books via backend proxy
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setRemoteBooks([]);
+      setRemoteError(null);
+      setRemoteLoading(false);
+      return;
+    }
+
+    let aborted = false;
+    async function fetchRemote() {
+      try {
+        setRemoteLoading(true);
+        setRemoteError(null);
+        const res = await fetch(`http://localhost:4000/books/search?q=${encodeURIComponent(q)}`);
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`);
         }
-
         const data: Book[] = await res.json();
-        setBooks(data);
+        if (!aborted) {
+          setRemoteBooks(data);
+          // Import remote books to local DB so recommendations can include them
+          const toImport = data.filter(b => !isObjectId(b.id));
+          if (toImport.length) {
+            await Promise.all(
+              toImport.map(book =>
+                fetch('http://localhost:4000/books/import', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                  },
+                  body: JSON.stringify({
+                    googleBooksId: (book as any).googleBooksId || book.id,
+                    title: book.title,
+                    author: book.author,
+                    genre: book.genre,
+                    yearPublished: book.yearPublished,
+                    coverUrl: book.coverUrl,
+                    description: book.description,
+                    pages: book.pages,
+                  }),
+                })
+              )
+            );
+            await fetchBooks();
+          }
+        }
       } catch (err) {
-        console.error('Error fetching books:', err);
-        setError('Failed to load books. Please try again later.');
+        console.error('Error searching remote books:', err);
+        if (!aborted) {
+          setRemoteError('Failed to search external books.');
+        }
       } finally {
-        setLoading(false);
+        if (!aborted) {
+          setRemoteLoading(false);
+        }
       }
     }
 
-    fetchBooks();
-  }, []);
+    fetchRemote();
+    return () => {
+      aborted = true;
+    };
+  }, [searchQuery]);
 
   // Get unique genres and authors
   const genres = Array.from(new Set(books.map(book => book.genre)));
@@ -101,25 +211,23 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
       ? unloggedBooks.filter(book => book.genre === favoriteGenre).slice(0, 4)
       : [];
 
-    // Popular/Trending books (newest books)
-    const trending = unloggedBooks
-      .sort((a, b) => b.yearPublished - a.yearPublished)
-      .slice(0, 4);
+    // If no genre-specific recs, fall back to first few unlogged books
+    const forYou = genreRecs.length > 0 ? genreRecs : unloggedBooks.slice(0, 4);
 
-    // Highly rated (mock - you could add ratings to books)
-    const popular = unloggedBooks
-      .slice(0, 4);
+    // Discover more: the next set of unlogged books not already in forYou
+    const forYouIds = new Set(forYou.map(b => b.id));
+    const popular = unloggedBooks.filter(b => !forYouIds.has(b.id)).slice(0, 8);
 
     return {
-      forYou: genreRecs,
-      trending,
+      forYou,
       popular
     };
   };
 
   // Filter and sort books for search mode
   const getSearchResults = () => {
-    let filtered = books.filter(book => {
+    const sourceBooks = searchQuery.trim() ? remoteBooks : books;
+    let filtered = sourceBooks.filter(book => {
       const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            book.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -199,6 +307,7 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
   };
 
   const recommendations = mode === 'explore' ? getRecommendations() : null;
+  const hasLoggedBooks = loggedBooks.length > 0;
   const searchResults = mode === 'searching' ? getSearchResults() : [];
 
   const renderBookCard = (book: Book) => (
@@ -258,6 +367,14 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
 
       {error && !loading && (
         <p className="text-red-500 mb-4">{error}</p>
+      )}
+
+      {mode === 'searching' && remoteLoading && (
+        <p className="text-gray-600 mb-4">Searching external books...</p>
+      )}
+
+      {mode === 'searching' && remoteError && !remoteLoading && (
+        <p className="text-red-500 mb-4">{remoteError}</p>
       )}
 
       {/* Search Bar */}
@@ -430,21 +547,10 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
         </div>
       )}
 
-      {/*Recommendations / All Books fallback */}
+      {/* Recommendations */}
       {mode === 'explore' && recommendations && (
-        <div className="space-y-8">
-          {/* Recommended for You */}
-          {recommendations.forYou.length > 0 ? (
-            <div>
-              <div className="flex items-center mb-4">
-                <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
-                <h3 className="text-2xl text-gray-900">Recommended for You</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {recommendations.forYou.map(renderBookCard)}
-              </div>
-            </div>
-          ) : (
+        <div className="space-y-10">
+          {!hasLoggedBooks && (
             <div>
               <div className="flex items-center mb-4">
                 <TrendingUp className="w-6 h-6 text-indigo-600 mr-2" />
@@ -455,11 +561,44 @@ export function SearchBooks({ onAddBook, loggedBooks, authToken }: SearchBooksPr
               </div>
             </div>
           )}
-         
+
+          {hasLoggedBooks && (
+            <>
+              {recommendations.forYou.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+                    <h3 className="text-2xl text-gray-900">Recommended for You</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {recommendations.forYou.map(renderBookCard)}
+                  </div>
+                </div>
+              )}
+
+              {recommendations.popular.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
+                    <h3 className="text-2xl text-gray-900">Discover More</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {recommendations.popular.map(renderBookCard)}
+                  </div>
+                </div>
+              )}
+
+              {recommendations.forYou.length === 0 &&
+                recommendations.popular.length === 0 && (
+                  <p className="text-gray-600">No recommendations available.</p>
+                )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Search */}
+{/* Search */}
+
       {mode === 'searching' && (
         <>
           <div className="mb-4">
