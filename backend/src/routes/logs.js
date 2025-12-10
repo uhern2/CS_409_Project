@@ -65,6 +65,11 @@ logsRouter.post("/", async (req, res) => {
       return res.status(400).json({ error: "bookId is required" });
     }
 
+    const existingLog = await ReadingLog.findOne({ user: userId, book: bookId });
+    if (existingLog) {
+      return res.status(400).json({ error: "This book is already logged" });
+    }
+
     const log = await ReadingLog.create({
       user: userId,
       book: bookId,
