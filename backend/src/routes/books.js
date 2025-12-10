@@ -3,6 +3,7 @@ import express from "express";
 import { Book } from "../models/Book.js";
 import { ReadingLog } from "../models/ReadingLog.js";
 import { optionalAuth } from "../middleware/optionalAuth.js";
+import { searchGoogleBooks } from "../googleBooks.js";
 
 export const booksRouter = express.Router();
 
@@ -47,6 +48,90 @@ booksRouter.get("/", async (req, res) => {
   } catch (err) {
     console.error("Error fetching books:", err);
     res.status(500).json({ error: "Failed to fetch books" });
+  }
+});
+
+// GET /books/search?q=term - search Google Books as a fallback/remote source
+booksRouter.get("/search", async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== "string" || q.trim().length === 0) {
+      return res.status(400).json({ error: "q (query) is required" });
+    }
+
+    const results = await searchGoogleBooks(q, 20);
+    const mapped = results.map((b, idx) => ({
+      // No DB id, so use googleBooksId or fallback
+      id: b.googleBooksId || `google-${idx}-${Date.now()}`,
+      title: b.title,
+      author: b.author,
+      genre: b.genre,
+      yearPublished: b.yearPublished || 0,
+      coverUrl: b.coverUrl,
+      description: b.description,
+      pages: b.pages || 0,
+      source: "google",
+    }));
+
+    res.json(mapped);
+  } catch (err) {
+    console.error("Error searching Google Books:", err);
+    res.status(500).json({ error: "Failed to search books" });
+  }
+});
+
+// POST /books/import - create or reuse a book from an external source (e.g., Google Books)
+booksRouter.post("/import", async (req, res) => {
+  try {
+    const {
+      googleBooksId,
+      title,
+      author,
+      genre,
+      yearPublished,
+      coverUrl,
+      description,
+      pages,
+    } = req.body;
+
+    if (!title || !author) {
+      return res.status(400).json({ error: "title and author are required" });
+    }
+
+    // Try to find by googleBooksId first
+    let book = null;
+    if (googleBooksId) {
+      book = await Book.findOne({ googleBooksId });
+    }
+
+    // If not found, create a new book
+    if (!book) {
+      book = await Book.create({
+        googleBooksId,
+        title,
+        author,
+        genre: genre || "Unknown",
+        yearPublished: yearPublished || 0,
+        coverUrl: coverUrl || "",
+        description: description || "",
+        pages: pages || 0,
+      });
+    }
+
+    res.status(201).json({
+      id: book._id.toString(),
+      title: book.title,
+      author: book.author,
+      genre: book.genre,
+      yearPublished: book.yearPublished,
+      coverUrl: book.coverUrl,
+      description: book.description,
+      pages: book.pages,
+      googleBooksId: book.googleBooksId,
+    });
+  } catch (err) {
+    console.error("Error importing book:", err);
+    res.status(500).json({ error: "Failed to import book" });
   }
 });
 

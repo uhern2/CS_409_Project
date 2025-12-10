@@ -44,6 +44,37 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
 
   const handleAddBook = async (newBook: LoggedBook) => {
     try {
+      let bookId = newBook.id;
+
+      // If the book id doesn't look like a Mongo ObjectId, try importing it first
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(bookId);
+      if (!isObjectId) {
+        const importRes = await fetch('http://localhost:4000/books/import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            googleBooksId: newBook.id,
+            title: newBook.title,
+            author: newBook.author,
+            genre: newBook.genre,
+            yearPublished: newBook.yearPublished,
+            coverUrl: newBook.coverUrl,
+            description: newBook.description,
+            pages: newBook.pages,
+          }),
+        });
+
+        if (!importRes.ok) {
+          throw new Error(`Import failed with status ${importRes.status}`);
+        }
+
+        const imported = await importRes.json();
+        bookId = imported.id;
+      }
+
       const res = await fetch('http://localhost:4000/logs', {
         method: 'POST',
         headers: {
@@ -51,7 +82,7 @@ export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
           Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          bookId: newBook.id,
+          bookId,
           startDate: newBook.startDate,
           finishDate: newBook.finishDate,
           rating: newBook.rating,
