@@ -122,7 +122,7 @@ export default function App() {
           path="/profile"
           element={
             isAuthenticated ? (
-              <UserProfile user={currentUser!} onLogout={handleLogout} />
+              <UserProfile user={currentUser!} authToken={authToken!} onLogout={handleLogout} />
             ) : (
               <Navigate to="/" replace />
             )

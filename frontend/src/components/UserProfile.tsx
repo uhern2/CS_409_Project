@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 
 interface UserProfileProps {
   user: { name: string; email: string };
+  authToken: string;
   onLogout: () => void;
 }
 
@@ -18,7 +19,7 @@ interface UserProfileData {
 
 const API_BASE_URL = 'http://localhost:4000';
 
-export function UserProfile({ user: initialUser, onLogout }: UserProfileProps) {
+export function UserProfile({ user: initialUser, authToken, onLogout }: UserProfileProps) {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +36,11 @@ export function UserProfile({ user: initialUser, onLogout }: UserProfileProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/users/me`);
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
       if (!response.ok) {
         throw new Error('Failed to fetch profile data');
       }
@@ -70,6 +75,7 @@ export function UserProfile({ user: initialUser, onLogout }: UserProfileProps) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ name: editedName.trim() }),
       });
