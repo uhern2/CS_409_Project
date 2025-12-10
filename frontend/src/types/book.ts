@@ -10,6 +10,7 @@ export interface Book {
 }
 
 export interface LoggedBook extends Book {
+  logId: string;
   startDate: string;
   finishDate: string;
   review: string;

@@ -27,8 +27,9 @@ import {
 
 interface MyBooksProps {
   loggedBooks: LoggedBook[];
-  onDeleteBook: (bookId: string) => void;
-  onUpdateBook: (bookId: string, updates: {
+  authToken?: string;
+  onDeleteBook: (logId: string) => void;
+  onUpdateBook: (logId: string, updates: {
     startDate: string;
     finishDate: string;
     review: string;
@@ -36,7 +37,7 @@ interface MyBooksProps {
   }) => void;
 }
 
-export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProps) {
+export function MyBooks({ loggedBooks, authToken, onDeleteBook, onUpdateBook }: MyBooksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGenre, setFilterGenre] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
@@ -73,8 +74,8 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
     }
   });
 
-  const handleDeleteClick = (bookId: string) => {
-    setBookToDelete(bookId);
+  const handleDeleteClick = (logId: string) => {
+    setBookToDelete(logId);
     setDeleteDialogOpen(true);
   };
 
@@ -98,7 +99,7 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
     rating: number;
   }) => {
     if (!bookToEdit) return;
-    onUpdateBook(bookToEdit.id, updates);
+    onUpdateBook(bookToEdit.logId, updates);
     setEditDialogOpen(false);
     setBookToEdit(null);
   };
@@ -178,7 +179,7 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBooks.map(book => (
             <Card 
-              key={book.id} 
+              key={book.logId} 
               className="overflow-hidden hover:shadow-lg transition cursor-pointer"
               onClick={() => handleBookCardClick(book)}
             >
@@ -206,7 +207,7 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteClick(book.id)}
+                        onClick={() => handleDeleteClick(book.logId)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 hover:scale-110 transition-transform cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -274,8 +275,9 @@ export function MyBooks({ loggedBooks, onDeleteBook, onUpdateBook }: MyBooksProp
           book={selectedBookForDetail}
           open={detailModalOpen}
           onOpenChange={setDetailModalOpen}
-          onUpdateBook={(bookId, updates) => {
-            onUpdateBook(bookId, updates);
+          authToken={authToken}
+          onUpdateBook={(logId, updates) => {
+            onUpdateBook(logId, updates);
             setDetailModalOpen(false);
           }}
         />

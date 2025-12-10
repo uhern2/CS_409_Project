@@ -206,6 +206,7 @@ export const mockBooks: Book[] = [
 export const mockLoggedBooks: LoggedBook[] = [
   {
     ...mockBooks[0],
+    logId: 'log-1',
     startDate: '2024-10-01',
     finishDate: '2024-10-15',
     review: 'A masterpiece of American literature. Fitzgerald\'s prose is stunning and the story is both tragic and beautiful.',
@@ -214,6 +215,7 @@ export const mockLoggedBooks: LoggedBook[] = [
   },
   {
     ...mockBooks[6],
+    logId: 'log-2',
     startDate: '2024-09-05',
     finishDate: '2024-09-20',
     review: 'An absolute magical journey! The world-building is incredible and I couldn\'t put it down.',
@@ -222,6 +224,7 @@ export const mockLoggedBooks: LoggedBook[] = [
   },
   {
     ...mockBooks[2],
+    logId: 'log-3',
     startDate: '2024-08-10',
     finishDate: '2024-08-28',
     review: 'Chilling and prophetic. Orwell\'s vision of a dystopian future feels eerily relevant today.',
@@ -230,6 +233,7 @@ export const mockLoggedBooks: LoggedBook[] = [
   },
   {
     ...mockBooks[15],
+    logId: 'log-4',
     startDate: '2024-07-01',
     finishDate: '2024-07-18',
     review: 'Fascinating exploration of human history. Harari presents complex ideas in an accessible way.',

@@ -1,47 +1,145 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Search, Library, LogOut, Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { MyBooks } from './MyBooks';
 import { SearchBooks } from './SearchBooks';
-import { mockLoggedBooks } from '../data/mockBooks';
 import { LoggedBook } from '../types/book';
 
 interface DashboardProps {
   user: { name: string; email: string };
+  authToken: string;
   onLogout: () => void;
 }
 
 type View = 'mybooks' | 'search';
 
-export function Dashboard({ user, onLogout }: DashboardProps) {
+export function Dashboard({ user, authToken, onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<View>('mybooks');
-  const [loggedBooks, setLoggedBooks] = useState<LoggedBook[]>(mockLoggedBooks);
+  const [loggedBooks, setLoggedBooks] = useState<LoggedBook[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleAddBook = (newBook: LoggedBook) => {
-    setLoggedBooks([newBook, ...loggedBooks]);
-    setCurrentView('mybooks');
+  useEffect(() => {
+    async function fetchLoggedBooks() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('http://localhost:4000/logs/me', {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+        const data: LoggedBook[] = await res.json();
+        setLoggedBooks(data);
+      } catch (err) {
+        console.error('Error fetching logged books:', err);
+      }
+    }
+
+    fetchLoggedBooks();
+  }, [authToken]);
+
+  const handleAddBook = async (newBook: LoggedBook) => {
+    try {
+      const res = await fetch('http://localhost:4000/logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          bookId: newBook.id,
+          startDate: newBook.startDate,
+          finishDate: newBook.finishDate,
+          rating: newBook.rating,
+          reviewText: newBook.review,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
+      const created: LoggedBook = await res.json();
+      setLoggedBooks(prev => [created, ...prev]);
+      setCurrentView('mybooks');
+    } catch (err) {
+      console.error('Error creating log:', err);
+      alert('Failed to save log. Please try again.');
+    }
   };
 
-  const handleDeleteBook = (bookId: string) => {
-    setLoggedBooks(loggedBooks.filter(book => book.id !== bookId));
+  const handleDeleteBook = async (logId: string) => {
+    // Optimistically update UI but keep snapshot to restore on failure
+    const snapshot = loggedBooks;
+    setLoggedBooks(prev => prev.filter(book => book.logId !== logId));
+
+    try {
+      const res = await fetch(`http://localhost:4000/logs/${logId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Error deleting log:', err);
+      // Revert UI if delete fails
+      if (snapshot.length) {
+        setLoggedBooks(snapshot);
+      }
+    }
   };
 
-  const handleUpdateBook = (bookId: string, updates: {
+  const handleUpdateBook = (logId: string, updates: {
     startDate: string;
     finishDate: string;
     review: string;
     rating: number;
   }) => {
+    // Optimistic update
+    const snapshot = loggedBooks;
     setLoggedBooks(prevBooks => 
       prevBooks.map(book => 
-        book.id === bookId 
+        book.logId === logId 
           ? { ...book, ...updates }
           : book
       )
     );
+
+    fetch(`http://localhost:4000/logs/${logId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        startDate: updates.startDate,
+        finishDate: updates.finishDate,
+        rating: updates.rating,
+        reviewText: updates.review,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+        const updated: LoggedBook = await res.json();
+        setLoggedBooks(prevBooks =>
+          prevBooks.map(book => book.logId === logId ? updated : book)
+        );
+      })
+      .catch((err) => {
+        console.error('Error updating log:', err);
+        alert('Failed to update log. Reverting changes.');
+        setLoggedBooks(snapshot);
+      });
   };
 
   return (
@@ -154,12 +252,13 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         {currentView === 'mybooks' && (
           <MyBooks 
             loggedBooks={loggedBooks} 
+            authToken={authToken}
             onDeleteBook={handleDeleteBook}
             onUpdateBook={handleUpdateBook}
           />
         )}
         {currentView === 'search' && (
-          <SearchBooks onAddBook={handleAddBook} loggedBooks={loggedBooks} />
+          <SearchBooks onAddBook={handleAddBook} loggedBooks={loggedBooks} authToken={authToken} />
         )}
       </main>
     </div>
