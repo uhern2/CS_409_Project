@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 
 interface UserProfileProps {
   user: { name: string; email: string };
+  authToken: string;
   onLogout: () => void;
 }
 
@@ -18,7 +19,7 @@ interface UserProfileData {
 
 const API_BASE_URL = 'http://localhost:4000';
 
-export function UserProfile({ user: initialUser, onLogout }: UserProfileProps) {
+export function UserProfile({ user: initialUser, authToken, onLogout }: UserProfileProps) {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,13 +36,39 @@ export function UserProfile({ user: initialUser, onLogout }: UserProfileProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/users/me`);
-      if (!response.ok) {
+      const [profileRes, logsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        fetch(`${API_BASE_URL}/logs/me`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+      ]);
+
+      if (!profileRes.ok) {
         throw new Error('Failed to fetch profile data');
       }
-      const data = await response.json();
-      setProfileData(data);
-      setEditedName(data.name);
+      const profile = await profileRes.json();
+
+      let totalBooksLogged = 0;
+      let averageRating: number | null = null;
+
+      if (logsRes.ok) {
+        const logs = await logsRes.json();
+        totalBooksLogged = Array.isArray(logs) ? logs.length : 0;
+        const ratings = Array.isArray(logs) ? logs.map((l: any) => l.rating).filter((r: any) => typeof r === 'number') : [];
+        if (ratings.length > 0) {
+          averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
+        }
+      }
+
+      setProfileData({
+        name: profile.name ?? initialUser.name,
+        email: profile.email ?? initialUser.email,
+        totalBooksLogged,
+        averageRating,
+      });
+      setEditedName(profile.name ?? initialUser.name);
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError('Failed to load profile data');
